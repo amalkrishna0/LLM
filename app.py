@@ -17,7 +17,7 @@ st.set_page_config(page_title="Law-GPT", layout="centered")
 
 col1, col2, col3 = st.columns([1, 30, 1])
 with col2:
-    st.image("banner.png", use_column_width=True)
+    st.image("images/banner.png", use_column_width=True)
 
 def hide_hamburger_menu():
     st.markdown("""
