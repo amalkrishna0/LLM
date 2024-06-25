@@ -6,7 +6,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import HumanMessage
+from langchain.schema import HumanMessage, AIMessage
 from langchain.chains import ConversationalRetrievalChain
 from langchain.llms import HuggingFaceHub
 import torch
@@ -86,13 +86,56 @@ def generate_final_document(outline, additional_info):
     response = llm(messages)
     return response.content
 
+def virtual_lawyer():
+    st.subheader("Your Virtual Lawyer")
+    
+    if 'lawyer_messages' not in st.session_state:
+        st.session_state.lawyer_messages = [
+            AIMessage(content="Hello, I'm your virtual lawyer specializing in Indian Penal Code (IPC) matters. How can I assist you today?")
+        ]
+    
+    if 'generate_response' not in st.session_state:
+        st.session_state.generate_response = False
+
+    for i, message in enumerate(st.session_state.lawyer_messages):
+        if isinstance(message, AIMessage):
+            st.write("Lawyer: ", message.content)
+        else:
+            st.text_area("You:", message.content, height=100, key=f"human_{i}")
+    
+    user_input = st.text_input("Ask your legal question:")
+    if st.button("Send"):
+        if user_input:
+            st.session_state.lawyer_messages.append(HumanMessage(content=user_input))
+            st.session_state.generate_response = True
+            st.experimental_rerun()
+
+    if st.session_state.generate_response:
+        with st.spinner("Generating response..."):
+            llm = ChatOpenAI(temperature=0.7)
+            messages = [
+                HumanMessage(content="You are a virtual lawyer specializing in Indian Penal Code (IPC). Answer the following question:"),
+                *st.session_state.lawyer_messages  # Include full conversation history
+            ]
+            response = llm(messages)
+            
+            st.session_state.lawyer_messages.append(AIMessage(content=response.content))
+            st.session_state.generate_response = False
+            st.experimental_rerun()
+
+    if st.button("Clear Conversation"):
+        st.session_state.lawyer_messages = [
+            AIMessage(content="Hello, I'm your virtual lawyer specializing in Indian Penal Code (IPC) matters. How can I assist you today?")
+        ]
+        st.session_state.generate_response = False
+        st.experimental_rerun()
 # Main function to run the Streamlit app
 def main():
     load_dotenv()
     st.header("Legal AI Assistant :scales:")
 
     # Mode selection
-    mode = st.sidebar.radio("Select Mode", ("PDF Chat", "Legal Document Generator"))
+    mode = st.sidebar.radio("Select Mode", ("PDF Chat", "Legal Document Generator","Virtual Lawyer"))
 
     if mode == "PDF Chat":
         st.subheader("Chat with multiple PDFs")
@@ -171,6 +214,8 @@ def main():
             if st.button("Start Over"):
                 st.session_state.stage = 0
                 st.experimental_rerun()
+    elif mode == "Virtual Lawyer":
+        virtual_lawyer()
 
 if __name__ == '__main__':
     main()
